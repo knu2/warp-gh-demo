@@ -29,7 +29,37 @@ You are analyzing and fixing bugs in a Python demo application. Provide minimal,
 - **Clear**: Explain what changed and why
 - **Complete**: Provide the full fixed file content
 
-### 4. FORMAT YOUR RESPONSE
+### 4. IMPLEMENT THE FIX
+
+**If you have write access to the repository:**
+
+You can create files and branches directly using bash commands:
+
+```bash
+# Make your code changes
+cat > path/to/file.py << 'EOF'
+[your fixed code]
+EOF
+
+# Create a branch and commit
+git config user.name "Warp AI Agent"
+git config user.email "warp-ai@github-actions"
+git checkout -b fix/issue-NUMBER-warp-ai
+git add path/to/file.py
+git commit -m "fix: description of fix"
+git push -u origin fix/issue-NUMBER-warp-ai
+
+# Create a pull request
+gh pr create --title "Fix: brief description" --body "Fixes #ISSUE_NUMBER
+
+[Your analysis and explanation]"
+```
+
+**If you only have read access:**
+
+Provide the complete fix in your response using this format:
+
+### 5. FORMAT YOUR RESPONSE
 
 Structure your response as:
 
