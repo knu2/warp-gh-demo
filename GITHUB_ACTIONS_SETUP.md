@@ -154,25 +154,39 @@ jobs:
         run: gh issue comment ${{ github.event.issue.number }} --body-file response.md
 ```
 
-### Example 2: Pull Request Analysis
+### Example 2: Pull Request Comment-Triggered Review
+
+**Recommended approach** - See `.github/workflows/warp-review.yml` for a complete implementation.
 
 ```yaml
-name: Warp PR Review
+name: Warp AI Code Review
 
 on:
-  pull_request:
-    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
 
 jobs:
-  review:
+  warp-review:
+    if: |
+      (
+        github.event_name == 'issue_comment' ||
+        github.event_name == 'pull_request_review_comment'
+      ) &&
+      contains(github.event.comment.body, '@warp-review')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
+      issues: write
     env:
       WARP_API_KEY: ${{ secrets.WARP_API_KEY }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       
       - name: Install Warp CLI
         run: |
@@ -180,22 +194,27 @@ jobs:
           echo "deb [arch=amd64 signed-by=/usr/share/keyrings/warp-archive-keyring.gpg] https://releases.warp.dev/linux/deb stable main" | sudo tee /etc/apt/sources.list.d/warp.list
           sudo apt update && sudo apt install warp-cli -y
       
-      - name: Get PR Changes
+      - name: Get PR Details and Run Review
         run: |
-          gh pr diff ${{ github.event.pull_request.number }} > pr-diff.txt
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Review with Warp
-        run: |
+          if [ "${{ github.event_name }}" == "issue_comment" ]; then
+            PR_NUMBER="${{ github.event.issue.number }}"
+          else
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          fi
+          
+          PR_DIFF=$(gh pr diff $PR_NUMBER)
+          
           warp-cli agent run \
-            --prompt "Review this PR for bugs and suggest improvements: $(cat pr-diff.txt)" \
+            --prompt "Review this PR. Diff: $PR_DIFF" \
             > review.md
       
       - name: Post Review
-        run: gh pr comment ${{ github.event.pull_request.number }} --body-file review.md
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" == "issue_comment" ]; then
+            gh pr comment ${{ github.event.issue.number }} --body-file review.md
+          else
+            gh pr comment ${{ github.event.pull_request.number }} --body-file review.md
+          fi
 ```
 
 ### Example 3: Scheduled Code Audit
@@ -385,13 +404,26 @@ Use the correct command name in your workflow.
 
 ---
 
-## Example: Complete Production Workflow
+## Example: Complete Production Workflows
 
-See `.github/workflows/warp-agent.yml` in this repository for a complete, production-ready example with:
-- Comment-based triggering (`@warp-fix`)
-- Structured prompt templates
+This repository includes two complete, production-ready workflows:
+
+### 1. Issue Fix Workflow (`.github/workflows/warp-agent.yml`)
+- Comment-based triggering with `@warp-fix` on issues
+- Structured prompt template (`.github/warp_fix_prompt.md`)
+- Automated bug analysis and fix suggestions
+- Posts fix as issue comment
+
+### 2. PR Review Workflow (`.github/workflows/warp-review.yml`)
+- Comment-based triggering with `@warp-review` on PRs
+- Comprehensive code review template (`.github/warp_review_prompt.md`)
+- Fetches PR diff and analyzes changes
+- Posts structured review as PR comment
+
+Both workflows include:
 - Error handling
 - Proper permissions
+- GitHub context integration
 - Response formatting
 
 ---

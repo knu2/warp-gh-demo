@@ -36,8 +36,9 @@ Simple Python app (`main.py`) with an intentional bug that causes a ValueError.
 
 ## Features
 
-- ✅ Comment-based triggering (`@warp-fix`)
+- ✅ **Issue Fixes** - Comment `@warp-fix` on issues for automated bug fixes
+- ✅ **PR Reviews** - Comment `@warp-review` on pull requests for AI code reviews
 - ✅ Structured prompt templates for better AI responses
 - ✅ Automatic code analysis and fix suggestions
-- ✅ Works on any issue in the repository
-- ✅ Production-ready workflow example
+- ✅ Works on any issue or PR in the repository
+- ✅ Production-ready workflow examples
