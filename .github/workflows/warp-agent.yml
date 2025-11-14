@@ -22,7 +22,7 @@ jobs:
           echo "deb [arch=amd64 signed-by=/usr/share/keyrings/warp-archive-keyring.gpg] https://releases.warp.dev/linux/deb stable main" | sudo tee /etc/apt/sources.list.d/warp.list
           sudo apt update
           sudo apt install warp-cli -y
-          warp --version
+          warp-cli --version
 
       - name: Run Warp Agent on Issue
         run: |
@@ -30,7 +30,7 @@ jobs:
           PROMPT="Fix the bug in this Python code. Here's the error from the issue: $ISSUE_BODY. Only edit main.py. Return the full fixed file with proper exception handling."
           
           echo "Running Warp Agent..."
-          warp agent run \
+          warp-cli agent run \
             --profile "hV6n5dNm7ThQVlOiPF8DLS" \
             --mcp-server "1deb1b14-b6e5-4996-ae99-233b7555d2d0" \
             --prompt "$PROMPT" > warp-response.md
