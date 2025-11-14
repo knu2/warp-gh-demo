@@ -1,13 +1,12 @@
 
 # Warp CLI + GitHub Actions: Full End-to-End Demo (AI Agent Instructions)
 
-> **Goal:** Create a **complete, runnable demo** — from repo to GitHub Actions — that lets **you (the human)** trigger a **Warp AI agent** directly from a **GitHub Issue** using only `gh` CLI and Warp CLI.  
-> The agent will **read the issue**, **analyze code**, **suggest fixes**, and **comment back** — all automated.
+> Goal: Create a complete, runnable demo — from repo to GitHub Actions — that lets you trigger a Warp AI agent directly from a GitHub Issue comment using only `gh` CLI and Warp CLI. The agent will read the issue, analyze code, suggest fixes, and comment back — all automated.
 
-**You (AI Agent) will do everything step-by-step.**  
-**I (human) will only:**  
-- Run `gh` commands you tell me  
-- Trigger the workflow from GitHub  
+You (AI Agent) will do everything step-by-step.
+I (human) will only:
+- Run `gh` commands you tell me
+- Trigger the workflow by commenting `@warp-fix` on an issue
 - Watch the magic
 
 ---
@@ -15,23 +14,21 @@
 ## Step 1: Create Demo Repository (Run Locally)
 
 ```bash
-# Create and enter repo
-mkdir warp-gh-demo && cd warp-gh-demo
+# Initialize git repo (if not already done)
 git init
-
-# Create a tiny Rust project (or use any language)
-cargo init --bin --name demo-app
 ```
 
-### Add a buggy `main.rs`
+### Add a buggy Python app
 ```bash
-cat > src/main.rs << 'EOF'
-fn main() {
-    println!("Hello, Warp!");
-    let x = "42".parse::<i32>().unwrap(); // Fine
-    let y = "abc".parse::<i32>().unwrap(); // Panic!
-    println!("Result: {}", x + y);
-}
+cat > main.py << 'EOF'
+def main():
+    print("Hello, Warp!")
+    x = int("42")  # Fine
+    y = int("abc")  # ValueError!
+    print(f"Result: {x + y}")
+
+if __name__ == "__main__":
+    main()
 EOF
 ```
 
@@ -42,15 +39,27 @@ cat > README.md << 'EOF'
 
 This repo demonstrates how to:
 - Run Warp AI agent in CI
-- Let humans trigger AI via GitHub Issues
+- Let humans trigger AI via GitHub Issue comments
 - Get AI-powered code fixes automatically
+
+## How it works
+
+1. Create an issue describing a bug
+2. Comment `@warp-fix` on the issue
+3. GitHub Actions triggers automatically
+4. Warp AI agent analyzes the code and issue
+5. Agent comments back with a fix
+
+## Demo App
+
+Simple Python app (`main.py`) with an intentional bug that causes a ValueError.
 EOF
 ```
 
 ### Commit
 ```bash
 git add .
-git commit -m "feat: initial buggy Rust app"
+git commit -m "feat: initial buggy Python app"
 ```
 
 ---
@@ -75,46 +84,56 @@ mkdir -p .github/workflows
 ### Create `.github/workflows/warp-agent.yml`
 ```bash
 cat > .github/workflows/warp-agent.yml << 'EOF'
-name: Warp AI Agent (Issue Trigger)
+name: Warp AI Agent (@warp-fix trigger)
 
 on:
-  issues:
-    types: [opened, labeled]
+  issue_comment:
+    types: [created]
 
 jobs:
-  run-warp-agent:
-    if: contains(github.event.issue.labels.*.name, 'warp-ai')
+  warp-fix:
+    # Only trigger on @warp-fix command
+    if: |
+      github.event_name == 'issue_comment' &&
+      contains(github.event.comment.body, '@warp-fix')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     env:
       WARP_API_KEY: ${{ secrets.WARP_API_KEY }}
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install Warp CLI
         run: |
-          curl -L https://releases.warp.dev/stable/linux-x86_64/warp-cli.tar.gz | tar -xz
-          sudo mv warp-cli /usr/local/bin/warp
-          warp --version
-
-      - name: Install gh CLI
-        run: |
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          sudo apt update && sudo apt install gh -y
+          # Add Warp package repository and install
+          curl -fsSL https://releases.warp.dev/linux/keys/warp.asc | sudo gpg --dearmor -o /usr/share/keyrings/warp-archive-keyring.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/warp-archive-keyring.gpg] https://releases.warp.dev/linux/deb stable main" | sudo tee /etc/apt/sources.list.d/warp.list
+          sudo apt update
+          sudo apt install warp-cli -y
+          which warp-cli || { echo "warp-cli not found"; exit 1; }
 
       - name: Run Warp Agent on Issue
         run: |
-          ISSUE_BODY=$(gh issue view ${{ github.event.issue.number }} --json body -q .body)
-          PROMPT="Fix the bug in this Rust code. Here's the error from CI and the issue: $ISSUE_BODY. Only edit src/main.rs. Return full fixed file."
-
+          ISSUE_NUMBER=${{ github.event.issue.number }}
+          ISSUE_BODY=$(gh issue view $ISSUE_NUMBER --json body -q .body)
+          COMMENT_BODY="${{ github.event.comment.body }}"
+          
+          PROMPT="Fix the bug in this Python code.
+          
+          Issue description: $ISSUE_BODY
+          
+          User comment: $COMMENT_BODY
+          
+          Analyze the code in main.py and provide a complete fixed version with proper exception handling."
+          
           echo "Running Warp Agent..."
-          warp agent run \
-            --profile "hV6n5dNm7ThQVlOiPF8DLS" \
-            --mcp-server "1deb1b14-b6e5-4996-ae99-233b7555d2d0" \
+          warp-cli agent run \
             --prompt "$PROMPT" > warp-response.md
-
+          
           cat warp-response.md
 
       - name: Comment Fix on Issue
@@ -123,84 +142,92 @@ jobs:
 EOF
 ```
 
+Key changes from original:
+- Uses `issue_comment` trigger instead of labels
+- Triggered by commenting `@warp-fix` on any issue
+- Installs Warp CLI via official apt repository
+- Uses `warp-cli` command (not `warp`)
+- Removed MCP server/profile flags (use default agent)
+- Adds `permissions: issues: write` for commenting
+- Uses `GITHUB_TOKEN` (no need for custom PAT)
+
 ### Commit & Push
 ```bash
 git add .github/workflows/warp-agent.yml
-git commit -m "ci: add Warp AI agent on labeled issues"
+git commit -m "ci: add Warp AI agent on @warp-fix comment"
 git push
 ```
 
 ---
 
-## Step 4: Set Up Secrets (I Do This on GitHub)
+## Step 4: Set Up Secrets
 
-Go to: **GitHub → Repo → Settings → Secrets and variables → Actions**
+Go to: GitHub → Repo → Settings → Secrets and variables → Actions
 
-Add these secrets:
+Add this secret:
 
 | Name | Value |
 |------|-------|
-| `WARP_API_KEY` | `wk-...` (from Warp Settings → API Keys) |
-| `GH_TOKEN` | GitHub PAT with `repo` scope (or use default `GITHUB_TOKEN`) |
+| `WARP_API_KEY` | `wk-...` (from Warp Settings → Platform → API Keys) |
 
-> **I do this manually** → Secrets are set.
+Note: No need for `GH_TOKEN` — the workflow uses the automatic `GITHUB_TOKEN`.
+
+Or use `gh` CLI:
+```bash
+gh secret set WARP_API_KEY --body "wk-your-api-key-here" --repo YOUR_USER/warp-gh-demo
+```
 
 ---
 
-## Step 5: Create a Trigger Issue (I Run This)
+## Step 5: Create an Issue and Trigger the Agent
 
 ```bash
 gh issue create \
-  --title "Fix panic in main.rs" \
-  --body "The app panics on startup with: thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value'. Please fix it." \
-  --label "warp-ai"
+  --title "Fix ValueError in main.py" \
+  --body "The app crashes with: ValueError: invalid literal for int() with base 10: 'abc'. Please fix it with proper exception handling."
 ```
 
-> **I run this** → Issue created with label `warp-ai`
+Then comment on the issue to trigger the agent:
+```bash
+gh issue comment 1 --body "@warp-fix"
+```
+
+> I run these → Issue created, then agent triggered by comment!
 
 ---
 
 ## Step 6: Watch GitHub Actions Run
 
-1. Go to: **GitHub → Actions tab**
-2. See job: **Warp AI Agent (Issue Trigger)**
+1. Go to: GitHub → Actions tab
+2. See job: Warp AI Agent (@warp-fix trigger)
 3. Watch logs:
-   - Warp CLI installs
-   - Agent reads issue
+   - Warp CLI installs via apt
+   - Agent reads issue + comment
    - Analyzes code
-   - Outputs fixed `main.rs`
-4. **Agent comments back on the issue** with the fix!
+   - Generates fixed `main.py`
+4. Agent comments back on the issue with the fix!
 
 ---
 
 ## Expected AI Comment on Issue
 
-```rust
-// src/main.rs
-fn main() {
-    println!("Hello, Warp!");
-    let x = "42".parse::<i32>().unwrap();
-    let y = "abc".parse::<i32>().unwrap_or(0); // Fixed: use unwrap_or
-    println!("Result: {}", x + y);
-}
+The agent will analyze the code and comment back with a fixed version, something like:
+
+```python
+def main():
+    print("Hello, Warp!")
+    x = int("42")
+    try:
+        y = int("abc")
+    except ValueError:
+        y = 0  # Default value on error
+    print(f"Result: {x + y}")
+
+if __name__ == "__main__":
+    main()
 ```
 
-> **No human coding. Just label → AI fixes.**
-
----
-
-## Bonus: One-Click Trigger (Reusable)
-
-Save this alias:
-```bash
-alias warpfix='gh issue create --title "AI Fix" --body "Fix this bug with Warp AI" --label "warp-ai"'
-```
-
-Now just run:
-```bash
-warpfix
-```
-→ AI fixes code in CI → comments fix.
+> No human coding. Just comment `@warp-fix` → AI analyzes and fixes.
 
 ---
 

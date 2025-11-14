@@ -1,12 +1,15 @@
-name: Warp AI Agent (Issue Trigger)
+name: Warp AI Agent (@warp-fix trigger)
 
 on:
-  issues:
-    types: [opened, labeled]
+  issue_comment:
+    types: [created]
 
 jobs:
-  run-warp-agent:
-    if: contains(github.event.issue.labels.*.name, 'warp-ai')
+  warp-fix:
+    # Only trigger on @warp-fix command
+    if: |
+      github.event_name == 'issue_comment' &&
+      contains(github.event.comment.body, '@warp-fix')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -29,8 +32,17 @@ jobs:
 
       - name: Run Warp Agent on Issue
         run: |
-          ISSUE_BODY=$(gh issue view ${{ github.event.issue.number }} --json body -q .body)
-          PROMPT="Fix the bug in this Python code. Here's the error from the issue: $ISSUE_BODY. Only edit main.py. Return the full fixed file with proper exception handling."
+          ISSUE_NUMBER=${{ github.event.issue.number }}
+          ISSUE_BODY=$(gh issue view $ISSUE_NUMBER --json body -q .body)
+          COMMENT_BODY="${{ github.event.comment.body }}"
+          
+          PROMPT="Fix the bug in this Python code.
+          
+          Issue description: $ISSUE_BODY
+          
+          User comment: $COMMENT_BODY
+          
+          Analyze the code in main.py and provide a complete fixed version with proper exception handling."
           
           echo "Running Warp Agent..."
           warp-cli agent run \
