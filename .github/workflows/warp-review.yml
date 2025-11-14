@@ -23,6 +23,7 @@ jobs:
     env:
       WARP_API_KEY: ${{ secrets.WARP_API_KEY }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      WARP_AGENT_PROFILE_ID: ${{ secrets.WARP_AGENT_PROFILE_ID }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -104,8 +105,12 @@ jobs:
           echo "**Your task:** Review this pull request following the instructions and format above. Provide thorough, constructive feedback." >> prompt.txt
           
           echo "Running Warp Agent Review..."
+          PROFILE_FLAG=""
+          if [ -n "$WARP_AGENT_PROFILE_ID" ]; then
+            PROFILE_FLAG="--profile $WARP_AGENT_PROFILE_ID"
+          fi
           warp-cli agent run \
-            --non-interactive \
+            $PROFILE_FLAG \
             --prompt "$(cat prompt.txt)" \
             > review-response.md
           
