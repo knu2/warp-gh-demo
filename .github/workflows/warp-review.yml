@@ -105,6 +105,7 @@ jobs:
           
           echo "Running Warp Agent Review..."
           warp-cli agent run \
+            --non-interactive \
             --prompt "$(cat prompt.txt)" \
             > review-response.md
           
