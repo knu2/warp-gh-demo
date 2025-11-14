@@ -11,17 +11,7 @@ You are reviewing code changes in a pull request. Provide thorough, constructive
 
 ### 1. GET PR CONTEXT
 
-Use GitHub CLI to fetch PR information:
-```bash
-# View PR details
-gh pr view <pr-number>
-
-# See the diff
-gh pr diff <pr-number>
-
-# Check PR status and files changed
-gh pr view <pr-number> --json files,additions,deletions,title,body
-```
+The PR details and diff have already been provided to you in the prompt below. You do not need to fetch them.
 
 ### 2. ANALYZE CHANGES
 - Review what files were changed and understand the context
