@@ -22,7 +22,7 @@ jobs:
           echo "deb [arch=amd64 signed-by=/usr/share/keyrings/warp-archive-keyring.gpg] https://releases.warp.dev/linux/deb stable main" | sudo tee /etc/apt/sources.list.d/warp.list
           sudo apt update
           sudo apt install warp-cli -y
-          warp-cli --version
+          which warp-cli || { echo "warp-cli not found"; exit 1; }
 
       - name: Run Warp Agent on Issue
         run: |
