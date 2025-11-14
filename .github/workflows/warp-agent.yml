@@ -1,0 +1,42 @@
+name: Warp AI Agent (Issue Trigger)
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  run-warp-agent:
+    if: contains(github.event.issue.labels.*.name, 'warp-ai')
+    runs-on: ubuntu-latest
+    env:
+      WARP_API_KEY: ${{ secrets.WARP_API_KEY }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Warp CLI
+        run: |
+          # Add Warp package repository and install
+          curl -fsSL https://releases.warp.dev/linux/keys/warp.asc | sudo gpg --dearmor -o /usr/share/keyrings/warp-archive-keyring.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/warp-archive-keyring.gpg] https://releases.warp.dev/linux/deb stable main" | sudo tee /etc/apt/sources.list.d/warp.list
+          sudo apt update
+          sudo apt install warp-cli -y
+          warp --version
+
+      - name: Run Warp Agent on Issue
+        run: |
+          ISSUE_BODY=$(gh issue view ${{ github.event.issue.number }} --json body -q .body)
+          PROMPT="Fix the bug in this Python code. Here's the error from the issue: $ISSUE_BODY. Only edit main.py. Return the full fixed file with proper exception handling."
+          
+          echo "Running Warp Agent..."
+          warp agent run \
+            --profile "hV6n5dNm7ThQVlOiPF8DLS" \
+            --mcp-server "1deb1b14-b6e5-4996-ae99-233b7555d2d0" \
+            --prompt "$PROMPT" > warp-response.md
+          
+          cat warp-response.md
+
+      - name: Comment Fix on Issue
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body-file warp-response.md
