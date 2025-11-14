@@ -21,6 +21,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Load fix instructions
+        id: load-instructions
+        run: |
+          # Read the template
+          INSTRUCTIONS=$(cat .github/warp_fix_prompt.md)
+          
+          # Use heredoc to preserve multiline content with context prepended
+          echo "CUSTOM_INSTRUCTIONS<<EOF" >> $GITHUB_OUTPUT
+          echo "# GitHub Context" >> $GITHUB_OUTPUT
+          echo "- Repository: ${{ github.repository }}" >> $GITHUB_OUTPUT
+          echo "- Issue Number: ${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          echo "- Triggered by: ${{ github.event.comment.user.login }}" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "$INSTRUCTIONS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Install Warp CLI
         run: |
           # Add Warp package repository and install
@@ -36,17 +52,34 @@ jobs:
           ISSUE_BODY=$(gh issue view $ISSUE_NUMBER --json body -q .body)
           COMMENT_BODY="${{ github.event.comment.body }}"
           
-          PROMPT="Fix the bug in this Python code.
-          
-          Issue description: $ISSUE_BODY
-          
-          User comment: $COMMENT_BODY
-          
-          Analyze the code in main.py and provide a complete fixed version with proper exception handling."
+          # Build comprehensive prompt with instructions
+          cat > prompt.txt << 'PROMPT_EOF'
+${{ steps.load-instructions.outputs.CUSTOM_INSTRUCTIONS }}
+
+---
+
+## Issue Details
+
+**Issue #${{ github.event.issue.number }}**: ${{ github.event.issue.title }}
+
+**Description:**
+PROMPT_EOF
+          echo "$ISSUE_BODY" >> prompt.txt
+          cat >> prompt.txt << 'PROMPT_EOF'
+
+**User Comment:**
+PROMPT_EOF
+          echo "$COMMENT_BODY" >> prompt.txt
+          cat >> prompt.txt << 'PROMPT_EOF'
+
+---
+
+**Your task:** Analyze the issue and provide a clear fix following the instructions above.
+PROMPT_EOF
           
           echo "Running Warp Agent..."
           warp-cli agent run \
-            --prompt "$PROMPT" > warp-response.md
+            --prompt "$(cat prompt.txt)" > warp-response.md
           
           cat warp-response.md
 
