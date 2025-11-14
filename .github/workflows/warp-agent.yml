@@ -49,33 +49,28 @@ jobs:
       - name: Run Warp Agent on Issue
         run: |
           ISSUE_NUMBER=${{ github.event.issue.number }}
+          ISSUE_TITLE="${{ github.event.issue.title }}"
           ISSUE_BODY=$(gh issue view $ISSUE_NUMBER --json body -q .body)
           COMMENT_BODY="${{ github.event.comment.body }}"
           
           # Build comprehensive prompt with instructions
-          cat > prompt.txt << 'PROMPT_EOF'
-${{ steps.load-instructions.outputs.CUSTOM_INSTRUCTIONS }}
-
----
-
-## Issue Details
-
-**Issue #${{ github.event.issue.number }}**: ${{ github.event.issue.title }}
-
-**Description:**
-PROMPT_EOF
+          echo "${{ steps.load-instructions.outputs.CUSTOM_INSTRUCTIONS }}" > prompt.txt
+          echo "" >> prompt.txt
+          echo "---" >> prompt.txt
+          echo "" >> prompt.txt
+          echo "## Issue Details" >> prompt.txt
+          echo "" >> prompt.txt
+          echo "**Issue #${ISSUE_NUMBER}**: ${ISSUE_TITLE}" >> prompt.txt
+          echo "" >> prompt.txt
+          echo "**Description:**" >> prompt.txt
           echo "$ISSUE_BODY" >> prompt.txt
-          cat >> prompt.txt << 'PROMPT_EOF'
-
-**User Comment:**
-PROMPT_EOF
+          echo "" >> prompt.txt
+          echo "**User Comment:**" >> prompt.txt
           echo "$COMMENT_BODY" >> prompt.txt
-          cat >> prompt.txt << 'PROMPT_EOF'
-
----
-
-**Your task:** Analyze the issue and provide a clear fix following the instructions above.
-PROMPT_EOF
+          echo "" >> prompt.txt
+          echo "---" >> prompt.txt
+          echo "" >> prompt.txt
+          echo "**Your task:** Analyze the issue and provide a clear fix following the instructions above." >> prompt.txt
           
           echo "Running Warp Agent..."
           warp-cli agent run \
