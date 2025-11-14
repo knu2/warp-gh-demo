@@ -37,18 +37,8 @@ jobs:
             ISSUE_NUMBER="${{ github.event.pull_request.number }}"
           fi
           
-          # Read the template
-          INSTRUCTIONS=$(cat .github/warp_fix_prompt.md)
-          
-          # Use heredoc to preserve multiline content with context prepended
-          echo "CUSTOM_INSTRUCTIONS<<EOF" >> $GITHUB_OUTPUT
-          echo "# GitHub Context" >> $GITHUB_OUTPUT
-          echo "- Repository: ${{ github.repository }}" >> $GITHUB_OUTPUT
-          echo "- Issue/PR Number: ${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
-          echo "- Triggered by: ${{ github.event.comment.user.login }}" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-          echo "$INSTRUCTIONS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Save issue number for later steps
+          echo "ISSUE_NUMBER=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
 
       - name: Install Warp CLI
         run: |
@@ -61,13 +51,21 @@ jobs:
 
       - name: Run Warp Agent on Issue
         run: |
-          ISSUE_NUMBER=${{ github.event.issue.number }}
+          ISSUE_NUMBER=${{ steps.load-instructions.outputs.ISSUE_NUMBER }}
           ISSUE_TITLE="${{ github.event.issue.title }}"
           ISSUE_BODY=$(gh issue view $ISSUE_NUMBER --json body -q .body)
           COMMENT_BODY="${{ github.event.comment.body }}"
           
           # Build comprehensive prompt with instructions
-          echo "${{ steps.load-instructions.outputs.CUSTOM_INSTRUCTIONS }}" > prompt.txt
+          # Load instructions from file
+          cat .github/warp_fix_prompt.md > prompt.txt
+          echo "" >> prompt.txt
+          echo "---" >> prompt.txt
+          echo "" >> prompt.txt
+          echo "# GitHub Context" >> prompt.txt
+          echo "- Repository: ${{ github.repository }}" >> prompt.txt
+          echo "- Issue/PR Number: ${ISSUE_NUMBER}" >> prompt.txt
+          echo "- Triggered by: ${{ github.event.comment.user.login }}" >> prompt.txt
           echo "" >> prompt.txt
           echo "---" >> prompt.txt
           echo "" >> prompt.txt
