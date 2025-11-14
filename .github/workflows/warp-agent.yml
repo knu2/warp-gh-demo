@@ -31,8 +31,6 @@ jobs:
           
           echo "Running Warp Agent..."
           warp-cli agent run \
-            --profile "hV6n5dNm7ThQVlOiPF8DLS" \
-            --mcp-server "1deb1b14-b6e5-4996-ae99-233b7555d2d0" \
             --prompt "$PROMPT" > warp-response.md
           
           cat warp-response.md
