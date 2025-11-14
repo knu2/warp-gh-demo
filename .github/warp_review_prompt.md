@@ -65,22 +65,22 @@ Total: [X critical, Y important, Z minor]
 
 ### 🔴 Critical (Must Fix)
 [Issues that will break functionality, cause data loss, or create security vulnerabilities]
-- **[Issue Title]** - `path/to/file.py:123`
-  - **Problem**: [What's wrong]
-  - **Fix**: [Specific solution]
-  - **Impact**: [Why this is critical]
+- **Issue Title** - filename and line number
+  - **Problem**: What's wrong
+  - **Fix**: Specific solution
+  - **Impact**: Why this is critical
 
 ### 🟡 Important (Should Fix)
 [Issues that impact user experience, code maintainability, or performance]
-- **[Issue Title]** - `path/to/file.py:45`
-  - **Problem**: [What's wrong]
-  - **Fix**: [Specific solution]
-  - **Impact**: [Why this should be addressed]
+- **Issue Title** - filename and line number
+  - **Problem**: What's wrong
+  - **Fix**: Specific solution
+  - **Impact**: Why this should be addressed
 
 ### 🟢 Minor (Consider)
 [Nice-to-have improvements and suggestions]
-- **[Suggestion]** - `path/to/file.py:67`
-  - **Description**: [Brief description and why it would help]
+- **Suggestion** - filename and line number
+  - **Description**: Brief description and why it would help
 
 ## Security Assessment
 [List any security issues found or state "✅ No security issues found"]
@@ -111,10 +111,10 @@ Performance aspects to review:
 **Assessment:** [Good/Adequate/Needs Improvement]
 
 **Missing Tests** (if any):
-1. **[Component/Function Name]**
-   - What to test: [Specific functionality]
-   - Why important: [Impact if it fails]
-   - Suggested test: [One sentence description]
+1. Component or function name
+   - What to test: Specific functionality
+   - Why important: Impact if it fails
+   - Suggested test: One sentence description
 
 ## Recommendations
 
@@ -124,15 +124,15 @@ Performance aspects to review:
 - [ ] ❌ Requires fixes before merging
 
 **Priority Actions:**
-1. [Most important action needed, if any]
-2. [Second priority, if applicable]
-3. [Additional improvements, if suggested]
+1. Most important action needed, if any
+2. Second priority, if applicable
+3. Additional improvements, if suggested
 
 **Rationale:**
-[Brief explanation of your recommendation]
+Brief explanation of your recommendation
 
 ## Questions for Author
-[Any clarifications needed about the approach, design decisions, or implementation]
+Any clarifications needed about the approach, design decisions, or implementation
 
 ---
 
